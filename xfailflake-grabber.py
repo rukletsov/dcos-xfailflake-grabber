@@ -1,4 +1,5 @@
 import json, os, re, shutil, sys, time
+from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 
 dcos_oss_dir = "dcos"
 dcos_oss_repo = "https://github.com/dcos/dcos.git"
@@ -95,8 +96,33 @@ def convert_to_redash(xfailflakes):
 
     return json.dumps(output)
 
+# For each GET request this handler replies with JSON in redash format.
+class RedashHandler(BaseHTTPRequestHandler):
+    def _set_headers(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.end_headers()
 
-# Entrypoint.
-dcos_oss_output = get_xfailflakes_from_repo(dcos_oss_repo, dcos_oss_dir)
-print "xfailflakes JSONified: '{}'".format(convert_to_default_format(dcos_oss_output, dcos_oss_repo))
-print "xfailflakes redashified: '{}'".format(convert_to_redash(dcos_oss_output))
+    def do_GET(self):
+        self._set_headers()
+        dcos_oss_output = get_xfailflakes_from_repo(dcos_oss_repo, dcos_oss_dir)
+        self.wfile.write(convert_to_redash(dcos_oss_output))
+
+# Starts a simple server with the `RedashHandler`.
+def serve(port):
+    server_address = ('', port)
+    httpd = HTTPServer(server_address, RedashHandler)
+
+    print "Starting httpd on port {}".format(port)
+    httpd.serve_forever()
+
+
+# Entrypoint. If `port` has been passed, serve JSON for GET requests,
+# otherwise spit out JSON to stdout.
+if __name__ == "__main__":
+    if len(sys.argv) == 2:
+        serve(int(sys.argv[1]))
+    else:
+        dcos_oss_output = get_xfailflakes_from_repo(dcos_oss_repo, dcos_oss_dir)
+        print "xfailflakes JSONified: '{}'".format(convert_to_default_format(dcos_oss_output, dcos_oss_repo))
+        print "xfailflakes redashified: '{}'".format(convert_to_redash(dcos_oss_output))
