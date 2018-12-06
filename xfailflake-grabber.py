@@ -41,7 +41,7 @@ def get_xfailflakes_from_files(target_files):
                     "ticket": t[0]})
     return xfailflakes
 
-#
+# Combines all pieces together: clone the repo, scan it, generate the output.
 def get_xfailflakes_from_repo(repo, tmpdir):
     # Clone DC/OS OSS repo.
     os.system("git clone {} {}".format(repo, tmpdir))
@@ -53,16 +53,50 @@ def get_xfailflakes_from_repo(repo, tmpdir):
     print "Cleaning up: removing {}".format(tmpdir)
     shutil.rmtree(tmpdir)
 
-    # Bake everything together with a timestamp and repo.
+    return xfailflakes
+
+# Bakes xfailflakes together with a timestamp and a repo, and spits out JSON.
+def convert_to_default_format(xfailflakes, repo):
     output = {
         "repo": repo,
         "timestamp": time.strftime("%Y.%m.%d %H:%M"),
         "xfailflakes": xfailflakes
     }
 
-    return output
+    return json.dumps(output)
+
+# Redash requires particular format for JSON input, see https://redash.io/help/data-sources/querying-urls
+# We organise the output in three columns: "test", "ticket", "file".
+def convert_to_redash(xfailflakes):
+    columns = [
+        {
+            "name": "test",
+            "type": "string",
+            "friendly_name": "Test"
+        },
+        {
+            "name": "ticket",
+            "type": "string",
+            "friendly_name": "JIRA ticket"
+        },
+        {
+            "name": "file",
+            "type": "string",
+            "friendly_name": "File"
+        }
+    ]
+
+    rows = xfailflakes
+
+    output = {
+        "columns": columns,
+        "rows": rows
+    }
+
+    return json.dumps(output)
 
 
 # Entrypoint.
 dcos_oss_output = get_xfailflakes_from_repo(dcos_oss_repo, dcos_oss_dir)
-print "xfailflakes JSONified: '{}'".format(json.dumps(dcos_oss_output))
+print "xfailflakes JSONified: '{}'".format(convert_to_default_format(dcos_oss_output, dcos_oss_repo))
+print "xfailflakes redashified: '{}'".format(convert_to_redash(dcos_oss_output))
