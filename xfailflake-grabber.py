@@ -1,5 +1,4 @@
-import json, os, re, shutil, sys, time
-from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+import BaseHTTPServer, json, os, re, shutil, sys, time
 
 dcos_oss_dir = "dcos"
 dcos_oss_repo = "https://github.com/dcos/dcos.git"
@@ -97,7 +96,7 @@ def convert_to_redash(xfailflakes):
     return json.dumps(output)
 
 # For each GET request this handler replies with JSON in redash format.
-class RedashHandler(BaseHTTPRequestHandler):
+class RedashHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def _set_headers(self):
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
@@ -111,7 +110,7 @@ class RedashHandler(BaseHTTPRequestHandler):
 # Starts a simple server with the `RedashHandler`.
 def serve(port):
     server_address = ('', port)
-    httpd = HTTPServer(server_address, RedashHandler)
+    httpd = BaseHTTPServer.HTTPServer(server_address, RedashHandler)
 
     print "Starting httpd on port {}".format(port)
     httpd.serve_forever()
