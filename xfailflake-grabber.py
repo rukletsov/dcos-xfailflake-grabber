@@ -121,8 +121,9 @@ class RedashHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         self._set_headers()
-        dcos_oss_output = get_xfailflakes_from_repo(dcos_oss_repo, dcos_oss_dir)
-        self.wfile.write(convert_to_redash(dcos_oss_output).encode('utf-8'))
+        if self.path == '/':
+            dcos_oss_output = get_xfailflakes_from_repo(dcos_oss_repo, dcos_oss_dir)
+            self.wfile.write(convert_to_redash(dcos_oss_output).encode('utf-8'))
 
 
 # Starts a simple server with the `RedashHandler`.
