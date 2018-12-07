@@ -55,6 +55,8 @@ def get_xfailflakes_from_files(target_files):
 
 
 # Combines all pieces together: clone the repo, scan it, generate the output.
+#
+# TODO(alexr): Add support for branches.
 def get_xfailflakes_from_repo(repo, tmpdir):
     # Clone DC/OS OSS repo.
     os.system("git clone {} {}".format(repo, tmpdir))
@@ -113,6 +115,8 @@ def convert_to_redash(xfailflakes):
 
 
 # For each GET request this handler replies with JSON in redash format.
+#
+# TODO(alexr): Serve both formats, redash and the default one.
 class RedashHandler(BaseHTTPRequestHandler):
     def _set_headers(self):
         self.send_response(200)
