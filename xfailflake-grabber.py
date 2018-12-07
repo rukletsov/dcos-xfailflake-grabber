@@ -9,6 +9,8 @@ except ImportError:
     from http.server import BaseHTTPRequestHandler
 
 
+# TODO(alexr): To support parallel requests, temp folders should have unique
+# names.
 dcos_oss_dir = "dcos"
 dcos_oss_repo = "https://github.com/dcos/dcos.git"
 #dcos_ee_dir = "dcos-ee"
@@ -128,6 +130,7 @@ def serve(port):
     server_address = ('', port)
     httpd = HTTPServer(server_address, RedashHandler)
 
+    # TODO(alexr): Spawn the server in a separate thread.
     print("Starting httpd on port {}".format(port))
     httpd.serve_forever()
 
