@@ -37,7 +37,7 @@ def get_xfailflakes_from_files(target_files):
     pattern = "xfailflake\(reason=\"(DCOS\S*).*?def\s*(\S*)\("
     xfailflakes = []
     for file in target_files:
-        with codecs.open(file, "r", encoding='utf-8', errors='ignore') as f:
+        with codecs.open(file, 'r', encoding='utf-8', errors='ignore') as f:
             contents = f.read()
             matched = re.findall(pattern, contents, re.MULTILINE|re.DOTALL)
             for t in matched:
@@ -120,7 +120,7 @@ class RedashHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self._set_headers()
         dcos_oss_output = get_xfailflakes_from_repo(dcos_oss_repo, dcos_oss_dir)
-        self.wfile.write(convert_to_redash(dcos_oss_output))
+        self.wfile.write(convert_to_redash(dcos_oss_output).encode('utf-8'))
 
 
 # Starts a simple server with the `RedashHandler`.
