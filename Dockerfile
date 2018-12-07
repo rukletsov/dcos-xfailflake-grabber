@@ -1,4 +1,4 @@
 FROM python:3
 ADD xfailflake-grabber.py /
 ENTRYPOINT ["python", "./xfailflake-grabber.py"]
-CMD ["8008"]
+CMD ["80"]
