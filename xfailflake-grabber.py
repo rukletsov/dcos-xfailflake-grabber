@@ -1,4 +1,5 @@
 import codecs, json, os, re, shutil, sys, time
+import postgres_redshift as db
 
 # Dances around python versions and modules conflict
 try:
@@ -145,6 +146,15 @@ def serve(port):
 if __name__ == "__main__":
     if len(sys.argv) == 2:
         serve(int(sys.argv[1]))
+    if len(sys.argv) == 1:
+        conn = db.connection()
+        cursor = conn.cursor()
+        db.ensure_table(cursor)
+
+        dcos_oss_output = get_xfailflakes_from_repo(dcos_oss_repo, dcos_oss_dir)
+        for xfailflake in dcos_oss_output:
+            db.insert(cursor, xfailflake)
+
     else:
         dcos_oss_output = get_xfailflakes_from_repo(dcos_oss_repo, dcos_oss_dir)
         print("xfailflakes JSONified: '{}'".format(convert_to_default_format(dcos_oss_output, dcos_oss_repo)))
