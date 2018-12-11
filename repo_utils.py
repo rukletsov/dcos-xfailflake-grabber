@@ -2,6 +2,13 @@
 import codecs, os, re, shutil, uuid
 
 
+# Pattern to match 'xfailflake' marked tests,
+# see `get_xfailflakes_from_files()`.
+#
+# NOTE: Use `.*?` to switch-off regex greediness; use `()` to leverage regex
+# groups and yield ticket and test name in the resulted match.
+PATTERN = "xfailflake\(reason=\"(DCOS\S*).*?def\s*(\S*)\("
+
 # An alternative to scanning the whole repo is to whitelist directories of
 # interest. For now there is no reason to do so.
 def get_target_files(rootdir):
@@ -19,11 +26,7 @@ def get_target_files(rootdir):
 # dictionary.
 #
 # TODO(alexr): Add repo and branch.
-#
-# NOTE: Use `.*?` to switch-off regex greediness; use `()` to leverage regex
-# groups and yield ticket and test name in the resulted match.
 def get_xfailflakes_from_files(rootdir, target_files):
-    pattern = "xfailflake\(reason=\"(DCOS\S*).*?def\s*(\S*)\("
     xfailflakes = []
     for filepath in target_files:
         if not filepath.startswith(rootdir):
@@ -31,7 +34,7 @@ def get_xfailflakes_from_files(rootdir, target_files):
 
         with codecs.open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
             contents = f.read()
-            matched = re.findall(pattern, contents, re.MULTILINE|re.DOTALL)
+            matched = re.findall(PATTERN, contents, re.MULTILINE|re.DOTALL)
             for t in matched:
                 if not t:
                     print("Error: Unexpected match in file '{}'".format(filepath))
@@ -42,6 +45,7 @@ def get_xfailflakes_from_files(rootdir, target_files):
                     "file": filepath[len(rootdir):],
                     "test": t[1],
                     "ticket": t[0]})
+
     return xfailflakes
 
 
