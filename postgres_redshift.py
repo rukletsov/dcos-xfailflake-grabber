@@ -13,7 +13,6 @@ DB = "events"
 CONNECT_TIMEOUT = 15 # in seconds
 SCHEMA = "dashboards"
 TABLE_HISTORY = "dashboards.xfailflake_history_v1"
-TABLE_LATEST = "dashboards.xfailflake_latest_v1"
 MAX_VARCHAR_LEN = 65535
 
 
@@ -63,26 +62,6 @@ def ensure_history(cursor):
         PRIMARY KEY (test, ticket, file, repo, branch, timestamp)
     );
     """.format(TABLE_HISTORY)
-
-    cursor.execute(statement)
-
-
-# TODO(alexr): Ideally we do not remove the table with the latest run upfront,
-# but only when we sure we got new data. Bonus points to drop, create, and
-# populate the table in one transaction.
-def recreate_latest(cursor):
-    statement = """
-    DROP TABLE IF EXISTS {0};
-    CREATE TABLE {0} (
-        test        VARCHAR,
-        ticket      VARCHAR,
-        file        VARCHAR,
-        repo        VARCHAR,
-        branch      VARCHAR,
-        timestamp   timestamp default current_timestamp,
-        PRIMARY KEY (test, ticket, file, repo, branch, timestamp)
-    );
-    """.format(TABLE_LATEST)
 
     cursor.execute(statement)
 
