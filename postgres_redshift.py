@@ -81,7 +81,3 @@ def _cleaned_val(val):
         return val[:MAX_VARCHAR_LEN]
     else:
         return val
-
-
-def blah():
-    print("fuck")
