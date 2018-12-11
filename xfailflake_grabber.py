@@ -1,5 +1,5 @@
 
-import codecs, json, os, re, shutil, sys, time, uuid
+import json, os, sys, time
 
 # Dances around python versions and modules conflict
 try:
@@ -11,70 +11,11 @@ except ImportError:
 
 # Internal helpers.
 import postgres_redshift as db
+import repo_utils as ru
 
 
 dcos_oss_repo = "https://github.com/dcos/dcos.git"
 #dcos_ee_repo = "https://github.com/mesosphere/dcos-enterprise.git"
-
-
-# An alternative to scanning the whole repo is to whitelist directories of
-# interest. For now there is no reason to do so.
-def get_target_files(rootdir):
-    target_files = []
-    for folder, _, filenames in os.walk(rootdir):
-        for filename in filenames:
-            target_files.append(os.path.join(folder, filename))
-    return target_files
-
-
-# Scan contents of each target file in search for a specific pattern:
-#     `...xfailflake(reason="DCOS... .... (\n)*... def test_foo(...`
-# Once the pattern is matched extract DCOS or DCOS_OSS ticket and the associated
-# text name. Augment the resulted tuple with the filename and convert it to a
-# dictionary.
-#
-# NOTE: Use `.*?` to switch-off regex greediness; use `()` to leverage regex
-# groups and yield ticket and test name in the resulted match.
-def get_xfailflakes_from_files(rootdir, target_files):
-    pattern = "xfailflake\(reason=\"(DCOS\S*).*?def\s*(\S*)\("
-    xfailflakes = []
-    for filepath in target_files:
-        if not filepath.startswith(rootdir):
-            print("Error: Unexpected file '{}' in '{}'".format(filepath, rootdir))
-
-        with codecs.open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
-            contents = f.read()
-            matched = re.findall(pattern, contents, re.MULTILINE|re.DOTALL)
-            for t in matched:
-                if not t:
-                    print("Error: Unexpected match in file '{}'".format(filepath))
-                if len(t) != 2:
-                    print("Error: Match {} in file '{}' has {} components while "
-                          "2 are expected".format(t, filepath, len(t)))
-                xfailflakes.append({
-                    "file": filepath[len(rootdir):],
-                    "test": t[1],
-                    "ticket": t[0]})
-    return xfailflakes
-
-
-# Combines all pieces together: clone the repo, scan it, generate the output.
-#
-# TODO(alexr): Add support for branches.
-def get_xfailflakes_from_repo(repo):
-    tmpdir = "repo_" + str(uuid.uuid1())
-
-    # Clone DC/OS OSS repo.
-    os.system("git clone {} {}".format(repo, tmpdir))
-
-    target_files = get_target_files(tmpdir)
-    xfailflakes = get_xfailflakes_from_files(tmpdir, target_files)
-
-    # Cleanup after ourselves.
-    print("Cleaning up: removing {}".format(tmpdir))
-    shutil.rmtree(tmpdir)
-
-    return xfailflakes
 
 
 # Bakes xfailflakes together with a timestamp and a repo, and spits out JSON.
@@ -132,7 +73,7 @@ class RedashHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self._set_headers()
         if self.path == '/' and repo is not None:
-            xfailflakes = get_xfailflakes_from_repo(repo)
+            xfailflakes = ru.get_xfailflakes_from_repo(repo)
             print("Serving xfailflakes redashified:\n'{}'".format(convert_to_redash(xfailflakes)))
             self.wfile.write(convert_to_redash(xfailflakes).encode('utf-8'))
 
@@ -144,7 +85,7 @@ class Server(HTTPServer):
 
 
 def dump_to_stdout(repo, args):
-    xfailflakes = get_xfailflakes_from_repo(repo)
+    xfailflakes = ru.get_xfailflakes_from_repo(repo)
     print("xfailflakes JSONified:\n'{}'".format(convert_to_default_format(xfailflakes, repo)))
 
 
@@ -165,7 +106,7 @@ def push_to_redshift(repo, args):
     cursor = conn.cursor()
     db.ensure_table(cursor)
 
-    xfailflakes = get_xfailflakes_from_repo(repo)
+    xfailflakes = ru.get_xfailflakes_from_repo(repo)
 
     for xfailflake in xfailflakes:
         print("Inserting xfailflake: {}".format(xfailflake))
