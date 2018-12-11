@@ -1,5 +1,5 @@
 
-import json, os, sys, time
+import os, sys
 
 # Dances around python versions and modules conflict
 try:
@@ -10,53 +10,13 @@ except ImportError:
     from http.server import BaseHTTPRequestHandler
 
 # Internal helpers.
+import json_formats as jf
 import postgres_redshift as db
 import repo_utils as ru
 
 
 dcos_oss_repo = "https://github.com/dcos/dcos.git"
 #dcos_ee_repo = "https://github.com/mesosphere/dcos-enterprise.git"
-
-
-# Bakes xfailflakes together with a timestamp and a repo, and spits out JSON.
-def convert_to_default_format(xfailflakes, repo):
-    output = {
-        "repo": repo,
-        "timestamp": time.strftime("%Y.%m.%d %H:%M"),
-        "xfailflakes": xfailflakes
-    }
-
-    return json.dumps(output)
-
-
-# Redash requires particular format for JSON input,
-# see https://redash.io/help/data-sources/querying-urls .
-# We organise the output in three columns: "test", "ticket", "file".
-def convert_to_redash(xfailflakes):
-    columns = [
-        {
-            "name": "test",
-            "type": "string",
-            "friendly_name": "Test"
-        },
-        {
-            "name": "ticket",
-            "type": "string",
-            "friendly_name": "JIRA ticket"
-        },
-        {
-            "name": "file",
-            "type": "string",
-            "friendly_name": "File"
-        }
-    ]
-
-    output = {
-        "columns": columns,
-        "rows": xfailflakes
-    }
-
-    return json.dumps(output)
 
 
 # For each GET request this handler replies with JSON in redash format.
@@ -74,8 +34,8 @@ class RedashHandler(BaseHTTPRequestHandler):
         self._set_headers()
         if self.path == '/' and repo is not None:
             xfailflakes = ru.get_xfailflakes_from_repo(repo)
-            print("Serving xfailflakes redashified:\n'{}'".format(convert_to_redash(xfailflakes)))
-            self.wfile.write(convert_to_redash(xfailflakes).encode('utf-8'))
+            print("Serving xfailflakes redashified:\n'{}'".format(jf.convert_to_redash(xfailflakes)))
+            self.wfile.write(jf.convert_to_redash(xfailflakes).encode('utf-8'))
 
 
 class Server(HTTPServer):
@@ -86,7 +46,7 @@ class Server(HTTPServer):
 
 def dump_to_stdout(repo, args):
     xfailflakes = ru.get_xfailflakes_from_repo(repo)
-    print("xfailflakes JSONified:\n'{}'".format(convert_to_default_format(xfailflakes, repo)))
+    print("xfailflakes JSONified:\n'{}'".format(jf.convert_to_default(xfailflakes, repo)))
 
 
 # Starts a simple server with the `RedashHandler`.
