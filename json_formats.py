@@ -5,7 +5,6 @@ import json, time
 # Bakes xfailflakes together with a timestamp and a repo, and spits out JSON.
 def convert_to_default(xfailflakes, repo):
     output = {
-        "repo": repo,
         "timestamp": time.strftime("%Y.%m.%d %H:%M"),
         "xfailflakes": xfailflakes
     }
@@ -34,6 +33,16 @@ def convert_to_redash(xfailflakes):
             "name": "file",
             "type": "string",
             "friendly_name": "File"
+        },
+        {
+            "name": "repo",
+            "type": "string",
+            "friendly_name": "Repository"
+        },
+        {
+            "name": "branch",
+            "type": "string",
+            "friendly_name": "Branch"
         }
     ]
 

@@ -64,13 +64,17 @@ def serve_redash(repo, args):
 def push_to_redshift(repo, args):
     conn = db.connection()
     cursor = conn.cursor()
-    db.ensure_table(cursor)
+
+    db.ensure_schema(cursor)
+    db.ensure_history(cursor)
+    db.recreate_latest(cursor)
 
     xfailflakes = ru.get_xfailflakes_from_repo(repo)
 
     for xfailflake in xfailflakes:
         print("Inserting xfailflake: {}".format(xfailflake))
-#        db.insert(cursor, xfailflake)
+        db.insert(cursor, db.TABLE_HISTORY, xfailflake)
+        db.insert(cursor, db.TABLE_LATEST, xfailflake)
 
 
 def print_help(repo, args):

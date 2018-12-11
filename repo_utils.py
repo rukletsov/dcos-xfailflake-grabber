@@ -24,9 +24,7 @@ def get_target_files(rootdir):
 # Once the pattern is matched extract DCOS or DCOS_OSS ticket and the associated
 # text name. Augment the resulted tuple with the filename and convert it to a
 # dictionary.
-#
-# TODO(alexr): Add repo and branch.
-def get_xfailflakes_from_files(rootdir, target_files):
+def get_xfailflakes_from_files(repo, branch, rootdir, target_files):
     xfailflakes = []
     for filepath in target_files:
         if not filepath.startswith(rootdir):
@@ -44,7 +42,9 @@ def get_xfailflakes_from_files(rootdir, target_files):
                 xfailflakes.append({
                     "file": filepath[len(rootdir):],
                     "test": t[1],
-                    "ticket": t[0]})
+                    "ticket": t[0],
+                    "repo": repo,
+                    "branch": branch})
 
     return xfailflakes
 
@@ -69,7 +69,7 @@ def get_xfailflakes_from_repo(repo):
     os.system("git clone {} {}".format(repo, tmpdir))
 
     target_files = get_target_files(tmpdir)
-    xfailflakes = get_xfailflakes_from_files(tmpdir, target_files)
+    xfailflakes = get_xfailflakes_from_files(repo, "master", tmpdir, target_files)
 
     # Cleanup after ourselves.
     print("Cleaning up: removing {}".format(tmpdir))

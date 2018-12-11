@@ -4,14 +4,17 @@ import os, psycopg2
 # see https://wiki.mesosphere.com/display/OPS/Segment+Redshift+Production+Instance
 #
 # TODO(alexr): Ideally we'd use a separate db.
+#
+# TODO(alexr): These should be parameters and not constants.
 HOST = "segment.cin53qlhwf0y.us-west-2.redshift.amazonaws.com"
 PORT = 5439
-CONNECT_TIMEOUT = 15 # in seconds
 DB = "events"
-SCHEMA = "dashboards"
-TABLE = "dashboards.xfailflake_v1"
 
-MAX_VARCHAR_LEN=65535
+CONNECT_TIMEOUT = 15 # in seconds
+SCHEMA = "dashboards"
+TABLE_HISTORY = "dashboards.xfailflake_history_v1"
+TABLE_LATEST = "dashboards.xfailflake_latest_v1"
+MAX_VARCHAR_LEN = 65535
 
 
 def connection():
@@ -40,24 +43,51 @@ def execute(cursor, statement, values=()):
     cursor.execute(statement, values)
 
 
-def ensure_table(cursor):
+def ensure_schema(cursor):
     statement = """
-    CREATE SCHEMA IF NOT EXISTS {schema};
-    CREATE TABLE IF NOT EXISTS {table} (
-        test        VARCHAR,
-        ticket      VARCHAR,
-        file        VARCHAR,
-        timestamp   timestamp default current_timestamp,
-        PRIMARY KEY (test, ticket, file, timestamp)
-    );
-    """.format(
-        schema=SCHEMA,
-        table=TABLE)
+    CREATE SCHEMA IF NOT EXISTS {};
+    """.format(SCHEMA)
 
     cursor.execute(statement)
 
 
-def insert(cursor, values_dict):
+def ensure_history(cursor):
+    statement = """
+    CREATE TABLE IF NOT EXISTS {} (
+        test        VARCHAR,
+        ticket      VARCHAR,
+        file        VARCHAR,
+        repo        VARCHAR,
+        branch      VARCHAR,
+        timestamp   timestamp default current_timestamp,
+        PRIMARY KEY (test, ticket, file, repo, branch, timestamp)
+    );
+    """.format(TABLE_HISTORY)
+
+    cursor.execute(statement)
+
+
+# TODO(alexr): Ideally we do not remove the table with the latest run upfront,
+# but only when we sure we got new data. Bonus points to drop, create, and
+# populate the table in one transaction.
+def recreate_latest(cursor):
+    statement = """
+    DROP TABLE IF EXISTS {0};
+    CREATE TABLE {0} (
+        test        VARCHAR,
+        ticket      VARCHAR,
+        file        VARCHAR,
+        repo        VARCHAR,
+        branch      VARCHAR,
+        timestamp   timestamp default current_timestamp,
+        PRIMARY KEY (test, ticket, file, repo, branch, timestamp)
+    );
+    """.format(TABLE_LATEST)
+
+    cursor.execute(statement)
+
+
+def insert(cursor, table, values_dict):
     columns = values_dict.keys()
     columns_str = _paren_csv(columns)
 
@@ -65,7 +95,7 @@ def insert(cursor, values_dict):
     values_template_str = _paren_csv(["%s"] * len(columns))
 
     statement = "INSERT INTO {} {} VALUES {}".format(
-        TABLE, columns_str, values_template_str)
+        table, columns_str, values_template_str)
 
     execute(cursor, statement, values)
 
