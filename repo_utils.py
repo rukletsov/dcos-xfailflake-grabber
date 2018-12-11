@@ -65,9 +65,17 @@ def get_xfailflakes_from_files(repo, branch, rootdir, target_files):
 def get_xfailflakes_from_repo(repo):
     tmpdir = "repo_" + str(uuid.uuid1())
 
-    # Clone DC/OS OSS repo.
-    os.system("git clone {} {}".format(repo, tmpdir))
+    # Clone DC/OS OSS repo. Use `GITHUB_TOKEN` env var if present.
+    repocmd = repo
 
+    token = os.getenv("GITHUB_TOKEN")
+    if token is not None:
+        index = repo.find("github")
+        repocmd = repo[:index] + token + "@" + repo[index:]
+
+    os.system("git clone {} {}".format(repocmd, tmpdir))
+
+    # Extract xfailflakes.
     target_files = get_target_files(tmpdir)
     xfailflakes = get_xfailflakes_from_files(repo, "master", tmpdir, target_files)
 

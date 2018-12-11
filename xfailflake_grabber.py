@@ -15,10 +15,6 @@ import postgres_redshift as db
 import repo_utils as ru
 
 
-dcos_oss_repo = "https://github.com/dcos/dcos.git"
-#dcos_ee_repo = "https://github.com/mesosphere/dcos-enterprise.git"
-
-
 # For each GET request this handler replies with JSON in redash format.
 #
 # TODO(alexr): Serve both formats, redash and the default one.
@@ -79,9 +75,11 @@ def push_to_redshift(repo, args):
 
 def print_help(repo, args):
     print(
-        "{0}Scans a given repo for 'xfailflake' marked tests and presents the{0}"
-        "resulted output in various ways. Relies on a specific pattern to{0}"
-        "extract the test name and the associated JIRA ticket.{0}{0}"
+        "{0}Scans a given repository for 'xfailflake' marked tests and presents{0}"
+        "the resulted output in various ways. Relies on a specific pattern to{0}"
+        "extract the test name and the associated JIRA ticket. Note that the{0}"
+        "repository must be cloneable; an access token can be provided via{0}"
+        "the `GITHUB_TOKEN` env var.{0}{0}"
         "Usage: python xfailflake-grabber.py <action> <repository> [args]{0}{0}"
         "Available actions:".format(os.linesep)
     )
