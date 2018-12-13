@@ -82,7 +82,7 @@ def print_help(repo, args):
         "Available actions:".format(os.linesep)
     )
     for a in actions:
-        print "  {0} - {1}".format(a, actions[a]["msg"])
+        print("  {0} - {1}".format(a, actions[a]["msg"]))
 
 
 # List of supported actions with callback and help message.
