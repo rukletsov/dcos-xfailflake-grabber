@@ -9,7 +9,8 @@ except ImportError:
     from http.server import HTTPServer
     from http.server import BaseHTTPRequestHandler
 
-# Internal helpers.
+# Internal helpers. Transitive dependencies:
+#  * psycopg2-binary
 import json_formats as jf
 import postgres_redshift as db
 import repo_utils as ru
@@ -20,6 +21,7 @@ import repo_utils as ru
 # TODO(alexr): Serve both formats, redash and the default one.
 class RedashHandler(BaseHTTPRequestHandler):
     repo = None
+    branch = None
 
     def _set_headers(self):
         self.send_response(200)
@@ -29,24 +31,25 @@ class RedashHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self._set_headers()
         if self.path == '/' and repo is not None:
-            xfailflakes = ru.get_xfailflakes_from_repo(repo)
+            xfailflakes = ru.get_xfailflakes_from_repo(repo, branch)
             print("Serving xfailflakes redashified:\n'{}'".format(jf.convert_to_redash(xfailflakes)))
             self.wfile.write(jf.convert_to_redash(xfailflakes).encode('utf-8'))
 
 
 class Server(HTTPServer):
-    def serve_forever(self, repo):
+    def serve_forever(self, repo, branch):
         self.RequestHandlerClass.repo = repo
+        self.RequestHandlerClass.branch = branch
         HTTPServer.serve_forever(self)
 
 
-def dump_to_stdout(repo, args):
-    xfailflakes = ru.get_xfailflakes_from_repo(repo)
+def dump_to_stdout(repo, branch, args):
+    xfailflakes = ru.get_xfailflakes_from_repo(repo, branch)
     print("xfailflakes JSONified:\n'{}'".format(jf.convert_to_default(xfailflakes, repo)))
 
 
 # Starts a simple server with the `RedashHandler`.
-def serve_redash(repo, args):
+def serve_redash(repo, branch, args):
     port = int(args[0])
 
     server_address = ('', port)
@@ -54,17 +57,17 @@ def serve_redash(repo, args):
 
     # TODO(alexr): Spawn the server in a separate thread.
     print("Starting httpd on port {}".format(port))
-    httpd.serve_forever(repo)
+    httpd.serve_forever(repo, branch)
 
 
-def push_to_redshift(repo, args):
+def push_to_redshift(repo, branch, args):
     conn = db.connection()
     cursor = conn.cursor()
 
     db.ensure_schema(cursor)
     db.ensure_history(cursor)
 
-    xfailflakes = ru.get_xfailflakes_from_repo(repo)
+    xfailflakes = ru.get_xfailflakes_from_repo(repo, branch)
 
     for xfailflake in xfailflakes:
         print("Inserting xfailflake: {}".format(xfailflake))
@@ -73,12 +76,12 @@ def push_to_redshift(repo, args):
 
 def print_help(repo, args):
     print(
-        "{0}Scans a given repository for 'xfailflake' marked tests and presents{0}"
-        "the resulted output in various ways. Relies on a specific pattern to{0}"
-        "extract the test name and the associated JIRA ticket. Note that the{0}"
-        "repository must be cloneable; an access token can be provided via{0}"
-        "the `GITHUB_TOKEN` env var.{0}{0}"
-        "Usage: python xfailflake-grabber.py <action> <repository> [args]{0}{0}"
+        "{0}Scans a given repository branch for 'xfailflake' marked tests and{0}"
+        "presents the resulted output in various ways. Relies on a specific{0}"
+        "pattern to extract the test name and the associated JIRA ticket. Note{0}"
+        "that the repository must be cloneable; an access token can be provided{0}"
+        "via the `GITHUB_TOKEN` env var.{0}{0}"
+        "Usage: python xfailflake-grabber.py <action> <repository> <branch> [args]{0}{0}"
         "Available actions:".format(os.linesep)
     )
     for a in actions:
@@ -86,8 +89,6 @@ def print_help(repo, args):
 
 
 # List of supported actions with callback and help message.
-#
-# TODO(alexr): Support branches.
 actions = {
     "dump": {
         "msg": "Dumps a JSON blob containing 'xfailflake' marked tests to stdout",
@@ -126,16 +127,17 @@ if __name__ == "__main__":
         print_help('', [])
         sys.exit(0)
 
-    if len(sys.argv) < 3:
-        print("Error: Each <action> requires target <repository>")
+    if len(sys.argv) < 4:
+        print("Error: Each <action> requires target <repository> and <branch>")
         print_help('', [])
         sys.exit(1)
 
     repo = sys.argv[2]
-    args = sys.argv[3:]
+    branch = sys.argv[3]
+    args = sys.argv[4:]
 
 if action in actions:
-    actions[action]["cmd"](repo, args)
+    actions[action]["cmd"](repo, branch, args)
 else:
     print("Unknown action '{}'".format(action))
     print_help('', [])

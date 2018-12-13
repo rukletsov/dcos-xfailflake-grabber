@@ -7,7 +7,9 @@ import codecs, os, re, shutil, uuid
 #
 # NOTE: Use `.*?` to switch-off regex greediness; use `()` to leverage regex
 # groups and yield ticket and test name in the resulted match.
-PATTERN = "xfailflake\(reason=\"(DCOS\S*).*?def\s*(\S*)\("
+#
+# TODO(alexr): Support both " and ' in the pattern.
+PATTERN = "xfailflake\(.*?reason=\"(DCOS\S*).*?def\s*(\S*)\("
 
 # An alternative to scanning the whole repo is to whitelist directories of
 # interest. For now there is no reason to do so.
@@ -56,13 +58,13 @@ def get_xfailflakes_from_files(repo, branch, rootdir, target_files):
 #         {
 #             "file": <filepath>,
 #             "test": <testname>,
-#             "ticket": <jira ticket>
+#             "ticket": <jira ticket>,
+#             "repo": <repo>,
+#             "branch": <branch>
 #         },
 #         ...
 #     ]
-#
-# TODO(alexr): Add support for branches.
-def get_xfailflakes_from_repo(repo):
+def get_xfailflakes_from_repo(repo, branch):
     tmpdir = "repo_" + str(uuid.uuid1())
 
     # Clone DC/OS OSS repo. Use `GITHUB_TOKEN` env var if present.
@@ -74,10 +76,13 @@ def get_xfailflakes_from_repo(repo):
         repocmd = repo[:index] + token + "@" + repo[index:]
 
     os.system("git clone {} {}".format(repocmd, tmpdir))
+    os.chdir(tmpdir)
+    os.system("git checkout -b {0} origin/{0}".format(branch))
+    os.chdir("..")
 
     # Extract xfailflakes.
     target_files = get_target_files(tmpdir)
-    xfailflakes = get_xfailflakes_from_files(repo, "master", tmpdir, target_files)
+    xfailflakes = get_xfailflakes_from_files(repo, branch, tmpdir, target_files)
 
     # Cleanup after ourselves.
     print("Cleaning up: removing {}".format(tmpdir))
