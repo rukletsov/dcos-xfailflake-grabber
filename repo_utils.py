@@ -28,17 +28,17 @@ def get_xfailflakes_from_files(repo, branch, rootdir, target_files):
     xfailflakes = []
     for filepath in target_files:
         if not filepath.startswith(rootdir):
-            print("Error: Unexpected file '{}' in '{}'".format(filepath, rootdir))
+            raise RuntimeError("Unexpected file '{}' in '{}'".format(filepath, rootdir))
 
         with codecs.open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
             contents = f.read()
-            matched = re.findall(PATTERN, contents, re.MULTILINE|re.DOTALL)
+            matched = re.findall(PATTERN, contents, re.MULTILINE | re.DOTALL)
             for t in matched:
                 if not t:
-                    print("Error: Unexpected match in file '{}'".format(filepath))
+                    raise RuntimeError("Unexpected match in file '{}'".format(filepath))
                 if len(t) != 2:
-                    print("Error: Match {} in file '{}' has {} components while "
-                          "2 are expected".format(t, filepath, len(t)))
+                    raise RuntimeError("Match {} in file '{}' has {} components "
+                        "while 2 are expected".format(t, filepath, len(t)))
                 xfailflakes.append({
                     "file": filepath[len(rootdir):],
                     "test": t[1],
