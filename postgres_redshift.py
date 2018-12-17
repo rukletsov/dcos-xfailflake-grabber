@@ -59,7 +59,8 @@ def ensure_history(cursor):
         repo        VARCHAR,
         branch      VARCHAR,
         timestamp   timestamp default current_timestamp,
-        PRIMARY KEY (test, ticket, file, repo, branch, timestamp)
+        since       timestamp,
+        PRIMARY KEY (test, ticket, file, repo, branch, timestamp, since)
     );
     """.format(TABLE_HISTORY)
 
