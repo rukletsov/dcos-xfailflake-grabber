@@ -2,14 +2,19 @@
 import codecs, os, re, shutil, uuid
 
 
-# Pattern to match 'xfailflake' marked tests,
-# see `get_xfailflakes_from_files()`.
+# Pattern to match 'xfailflake' marked tests, see `get_xfailflakes_from_files()`.
+# Each match yields a 3-tuple: <jira_ticket, since_when_muted, test_name>.
 #
-# NOTE: Use `.*?` to switch-off regex greediness; use `()` to leverage regex
+# We start with searching for `xfailflake(`, then skip symbols until we observe
+# `jira`, which value we extract, then skip sympols again and scan for `since`,
+# last comes the test name, which we expect to be enclosed between `def` and `)`.
+#
+# NOTE: We use `.*?` to switch-off regex greediness and `()` to leverage regex
 # groups and yield ticket and test name in the resulted match.
 #
 # TODO(alexr): Support both " and ' in the pattern.
-PATTERN = "xfailflake\(.*?reason=\"(DCOS\S*).*?def\s*(\S*)\("
+PATTERN = "xfailflake\(.*?jira=['\"](\S*?)['\"].*?since=['\"](\S*?)['\"].*?def\s*(\S*?)\("
+
 
 # An alternative to scanning the whole repo is to whitelist directories of
 # interest. For now there is no reason to do so.
@@ -38,13 +43,14 @@ def get_xfailflakes_from_files(repo, branch, rootdir, target_files):
             for t in matched:
                 if not t:
                     raise RuntimeError("Unexpected match in file '{}'".format(filepath))
-                if len(t) != 2:
+                if len(t) != 3:
                     raise RuntimeError("Match {} in file '{}' has {} components "
-                        "while 2 are expected".format(t, filepath, len(t)))
+                        "while 3 are expected".format(t, filepath, len(t)))
                 xfailflakes.append({
                     "file": filepath[len(rootdir):],
-                    "test": t[1],
+                    "test": t[2],
                     "ticket": t[0],
+                    "since": t[1],
                     "repo": repo,
                     "branch": branch})
 
@@ -59,6 +65,7 @@ def get_xfailflakes_from_files(repo, branch, rootdir, target_files):
 #             "file": <filepath>,
 #             "test": <testname>,
 #             "ticket": <jira ticket>,
+#             "since": <date>,
 #             "repo": <repo>,
 #             "branch": <branch>
 #         },
