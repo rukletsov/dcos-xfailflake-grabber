@@ -14,6 +14,8 @@ import codecs, os, re, shutil, uuid
 #
 # TODO(alexr): Support both " and ' in the pattern.
 PATTERN = "xfailflake\(.*?jira=['\"](\S*?)['\"].*?since=['\"](\S*?)['\"].*?def\s*(\S*?)\("
+# TODO(alexr): Pattern for the v1 of `xfailflake` format; remove after migration.
+#PATTERN = "xfailflake\(.*?reason=['\"](DCOS\S*).*?def\s*(\S*?)\("
 
 
 # An alternative to scanning the whole repo is to whitelist directories of
@@ -92,6 +94,8 @@ def get_xfailflakes_from_repo(repo, branch):
     xfailflakes = get_xfailflakes_from_files(repo, branch, tmpdir, target_files)
 
     # Cleanup after ourselves.
+    #
+    # TODO(alexr): If an exception is thrown above, this will be skipped.
     print("Cleaning up: removing {}".format(tmpdir))
     shutil.rmtree(tmpdir)
 
