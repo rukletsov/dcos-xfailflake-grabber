@@ -11,11 +11,7 @@ import codecs, os, re, shutil, uuid
 #
 # NOTE: We use `.*?` to switch-off regex greediness and `()` to leverage regex
 # groups and yield ticket and test name in the resulted match.
-#
-# TODO(alexr): Support both " and ' in the pattern.
 PATTERN = "xfailflake\(.*?jira=['\"](\S*?)['\"].*?since=['\"](\S*?)['\"].*?def\s*(\S*?)\("
-# TODO(alexr): Pattern for the v1 of `xfailflake` format; remove after migration.
-#PATTERN = "xfailflake\(.*?reason=['\"](DCOS\S*).*?def\s*(\S*?)\("
 
 
 # An alternative to scanning the whole repo is to whitelist directories of

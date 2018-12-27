@@ -15,8 +15,6 @@ def convert_to_default(xfailflakes, repo):
 # Redash requires particular format for JSON input,
 # see https://redash.io/help/data-sources/querying-urls .
 # We organise the output in three columns: "test", "ticket", "file".
-#
-# TODO(alexr): Add repo and branch.
 def convert_to_redash(xfailflakes):
     columns = [
         {

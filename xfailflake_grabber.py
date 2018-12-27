@@ -66,6 +66,8 @@ def push_to_redshift(repo, branch, args):
     conn = db.connection()
     cursor = conn.cursor()
 
+    # TODO(alexr): Remove old records in the DB.
+
     db.ensure_schema(cursor)
     db.ensure_history(cursor)
 
@@ -80,7 +82,7 @@ def print_help(repo, args):
         "presents the resulted output in various ways. Relies on a specific{0}"
         "pattern to extract the test name and the associated JIRA ticket. Note{0}"
         "that the repository must be cloneable; an access token can be provided{0}"
-        "via the `GITHUB_TOKEN` env var.{0}{0}"
+        "via the 'GITHUB_TOKEN' env var.{0}{0}"
         "Usage: python xfailflake-grabber.py <action> <repository> <branch> [args]{0}{0}"
         "Available actions:".format(os.linesep)
     )
